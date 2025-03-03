@@ -23,8 +23,13 @@ const userSchema = new Schema({
         type: String,
         required: true
     },
+    status: {
+        type: Boolean,
+        default: true
+    },
     roleId: {
         type: Schema.Types.ObjectId,
+        default: "67c138b76acafdcf94ed4b2b",
         required: true,
         ref: "roles" //Collection name
     }
