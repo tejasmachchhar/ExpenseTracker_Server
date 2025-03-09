@@ -29,6 +29,11 @@ app.use(roleRoutes);
 const userRoutes = require('./src/routes/UserRoutes');
 app.use(userRoutes);
 
+const tranCategoriesRoutes = require('./src/routes/TransactionCategoriesRoutes');
+app.use(tranCategoriesRoutes);
+
+
+
 
 // Database connection
 mongoose.connect('mongodb://localhost:27017/ExpenseTrackerDB', {

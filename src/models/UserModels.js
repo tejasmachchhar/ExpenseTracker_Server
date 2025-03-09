@@ -33,6 +33,8 @@ const userSchema = new Schema({
         required: true,
         ref: "roles" //Collection name
     }
+}, {
+    timestamp: true
 })
 
 module.exports = mongoose.model('users', userSchema);
