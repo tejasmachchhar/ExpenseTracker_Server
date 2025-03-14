@@ -2,7 +2,7 @@ const TransactionCategoriesModel = require('../models/TransactionCategoriesModel
 
 const getAllTranCategories = async (req,res) => {
     try {
-        const foundTranCategories = await TransactionCategoriesModel.find();
+        const foundTranCategories = await TransactionCategoriesModel.find().populate("TranTypeId");
         res.status(200).json({
             message: 'Transaction Categories fetched successfully',
             data: foundTranCategories
@@ -25,20 +25,23 @@ const addTranCategory = async (req,res) => {
     } catch (error) {
         res.status(500).json({
             message: 'Error adding Transaction Categories',
-            error: error
-        })
+            error: error.message,
+        });
     }
 }
 
 const getTranCatByTranType = async (req, res) => {
     try{
-        const foundTranCat = await TransactionCategoriesModel.findById(req.params.id);
+        const foundTranCatByTranType = await TransactionCategoriesModel.find({ TranTypeId: req.params.TranTypeId}).populate("TranTypeId");
         res.status(200).json({
-            message: "Transaction Catgories found successfully",
-            data: foundTranCat
-        })
+            message: "Transaction Categories found successfully",
+            data: foundTranCatByTranType,
+        });
     }catch(error){
-
+        res.status(500).json({
+            message: "Error getting transaction categories by transaction type",
+            error: error.message,
+        });
     }
 }
 

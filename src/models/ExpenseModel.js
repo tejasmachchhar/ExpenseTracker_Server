@@ -2,8 +2,13 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const expenseSchema = new Schema({
+    userId: {
+        type: Schema.Types.ObjectId,
+        required: true,
+        ref: 'users',
+    },
     amountSpent: {
-        type: String,
+        type: Number,
         required: true
     },
     paidTo: {
@@ -14,25 +19,25 @@ const expenseSchema = new Schema({
         type: Number,
         required: true,
     },
-    account:{
+    accountId:{
         type: Schema.Types.ObjectId,
-        required: true
+        required: true,
+        ref: 'account',
     },
     categoryId: {
         type: Schema.Types.ObjectId,
         required: true,
-        ref: ''
+        ref: 'TransactionCategories',
     },
     notes: {
         type: String,
         required: true
     },
-    attachment:{
-        type: Image
+    attachmentUrl:{
+        type: String,
     },
-
 }, {
-    timespamp: true
+    timespamp: true,
 })
 
 module.exports = mongoose.model('expense', expenseSchema)

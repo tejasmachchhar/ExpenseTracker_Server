@@ -4,17 +4,18 @@ const Schema = mongoose.Schema;
 const TransactionCategoriesSchema = new Schema({
     category:{
         type: String,
-        require: true
+        require: true,
+        unique: true,
     },
-    type: {
-        enum: ['income', 'expense'],
-        type: String,
-        require: true
+    TranTypeId: {
+        type: Schema.Types.ObjectId,
+        ref: 'tranTypeModel', //Collection name
+        required: true,
     },
     isTransaction: {
         type: Boolean,
-        default: true
-    }
-})
+        default: true,
+    },
+});
 
 module.exports = mongoose.model('TransactionCategories', TransactionCategoriesSchema)

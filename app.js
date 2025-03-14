@@ -32,7 +32,14 @@ app.use(userRoutes);
 const tranCategoriesRoutes = require('./src/routes/TransactionCategoriesRoutes');
 app.use(tranCategoriesRoutes);
 
+const tranTypeRoutes = require('./src/routes/TranTypeRoutes');
+app.use(tranTypeRoutes);
 
+const expenseRoutes = require('./src/routes/ExpenseRoutes');
+app.use(expenseRoutes);
+
+const accountRoutes = require('./src/routes/AccountRoutes');
+app.use(accountRoutes);
 
 
 // Database connection
