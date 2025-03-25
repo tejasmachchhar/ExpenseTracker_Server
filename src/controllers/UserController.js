@@ -1,5 +1,6 @@
 const userModel = require('../models/UserModels');
 const bcrypt = require("bcrypt");
+const { sendingMail } = require('../utils/MailUtil');
 
 const getAllUsers = async (req, res) => {
     try {
@@ -25,7 +26,8 @@ const createUser = async (req, res) => {
         res.status(201).json({
             message: 'User created successfully',
             data: createdUser
-        })
+        });
+        sendingMail(req.body.email, "Welcome to Expense Tracker", "You have successfully registered to Expense Tracker");
     } catch (err) {
         res.status(500).json({
             message: "Error creating user",
@@ -38,6 +40,12 @@ const loginUser = async (req, res) => {
     try {
         const email = req.body.email;
         const password = req.body.password;
+        if(email == null || password == null) {
+            res.status(404).json({
+                message: "Please enter email and password"
+            })
+            return;
+        }
         const foundUserByEmail = await userModel.findOne({ email: email }).populate("roleId");
         console.log(foundUserByEmail);
         if (foundUserByEmail != null) {
@@ -49,7 +57,7 @@ const loginUser = async (req, res) => {
                 })
             } else {
                 res.status(404).json({
-                    message: "Invalid password, please enter password conciously!!"
+                    message: "Invalid password, please enter password consiously!!"
                 })
             } 
         } else {
