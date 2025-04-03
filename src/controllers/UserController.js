@@ -6,7 +6,7 @@ const getAllUsers = async (req, res) => {
     try {
         const foundUsers = await userModel.find().populate("roleId");
         res.status(200).json({
-            message: 'User fetched successfully',
+            message: 'Users fetched successfully',
             data: foundUsers
         })
     } catch (err) {
@@ -105,6 +105,21 @@ const findUserById = async (req, res) => {
     }
 }
 
+const updateUserById = async (req, res) => {
+    try{
+        const updatedUser = await userModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.status(200).json({
+            message: "User updated successfully",
+            data: updatedUser
+        })
+    }catch(err) {
+        res.status(500).json({
+            message: "Error updating user",
+            error: err.message
+        })
+    }
+}
+
 module.exports = {
-    getAllUsers, createUser, deleteUserById, findUserById, loginUser
+    getAllUsers, createUser, deleteUserById, findUserById, loginUser, updateUserById,
 }

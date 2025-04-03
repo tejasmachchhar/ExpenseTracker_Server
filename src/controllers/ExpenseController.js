@@ -15,8 +15,9 @@ const storage = multer.diskStorage({
 // multer object
 const upload = multer({
     storage: storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
     // filerFilter:
-}).single('image');
+}).single('attachmentUrl');
 
 const getAllExpenses = async (req, res) => {
     try {
@@ -55,7 +56,7 @@ const addExpenseWithAttachment = async (req, res) => {
     // upload image to server file system
     upload(req, res, async (err) => {
         if (err) {
-            console.error("if err upload: " + req + ", Res: " + res);
+            console.error("if err upload: " + req + ", Res: " + res + ", err: " + err);
             res.status(500).json({
                 message: 'Error adding expense',
                 error: err.message,
@@ -75,11 +76,13 @@ const addExpenseWithAttachment = async (req, res) => {
             try {
                 // cloudinary
                 const cloudinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(req.file);
-                console.log(cloudinaryResponse);
-                console.log(req.body);
+                console.log('cloudinaryResponse: ' + cloudinaryResponse);
+                // console.log('req.body:' + req.body);
 
                 // store data in database (MongoDB)
                 req.body.attachmentUrl = cloudinaryResponse.secure_url;
+                req.body.dateTime = new Date(req.body.dateTime).getTime(); // Convert date to timestamp
+                // console.log('req.body after: ' + req.body);
                 const savedExpense = await expenseModel.create(req.body);
                 res.status(200).json({
                     message: 'Expense added successfully',
@@ -95,6 +98,73 @@ const addExpenseWithAttachment = async (req, res) => {
         }
     });
 }
+
+const updateExpenseById = async (req, res) => {
+    // Upload image to server file system
+    upload(req, res, async (err) => {
+        if (err) {
+            console.error("Multer error:", err);
+            return res.status(500).json({
+                message: 'Error updating expense',
+                error: err.message,
+            });
+        }
+
+        console.log("Request headers:", req.headers);
+        console.log("Request body:", req.body);
+        console.log("File received:", req.file);
+
+        try {
+            // Find the existing expense to get the old attachment URL
+            const existingExpense = await expenseModel.findById(req.params.id);
+            if (!existingExpense) {
+                return res.status(404).json({
+                    message: 'Expense not found',
+                });
+            }
+
+            // If a file is uploaded, delete the old file and upload the new one
+            if (req.file) {
+                // Delete the old file from Cloudinary
+                if (existingExpense.attachmentUrl) {
+                    const publicId = existingExpense.attachmentUrl.split('/').pop().split('.')[0]; // Extract public ID
+                    await cloudinaryUtil.deleteFileFromCloudinary(publicId);
+                }
+
+                // Delete the old file from the server file system
+                if (existingExpense.attachmentUrl) {
+                    const oldFilePath = `./uploads/${existingExpense.attachmentUrl.split('/').pop()}`; // Extract file name
+                    fs.unlink(oldFilePath, (err) => {
+                        if (err) {
+                            console.error("Error deleting old file from server:", err);
+                        } else {
+                            console.log("Old file deleted from server:", oldFilePath);
+                        }
+                    });
+                }
+
+                // Upload the new file to Cloudinary
+                const cloudinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(req.file);
+                console.log("Cloudinary response:", cloudinaryResponse);
+                req.body.attachmentUrl = cloudinaryResponse.secure_url;
+            }
+
+            // Update the expense in the database
+            const updatedExpense = await expenseModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
+
+            res.status(200).json({
+                message: 'Expense updated successfully',
+                data: updatedExpense,
+            });
+        } catch (error) {
+            console.error('Database error:', error);
+            res.status(500).json({
+                message: 'Error updating expense',
+                error: error.message,
+            });
+        }
+    });
+};
 
 const deleteExpenseById = async (req, res) => {
     try {
@@ -112,5 +182,5 @@ const deleteExpenseById = async (req, res) => {
 }
 
 module.exports = {
-    getAllExpenses, addExpense, addExpenseWithAttachment, deleteExpenseById,
+    getAllExpenses, addExpense, addExpenseWithAttachment, updateExpenseById, deleteExpenseById,
 }

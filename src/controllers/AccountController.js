@@ -1,4 +1,4 @@
-const accountModel = require('../models/AccountsModel');
+const accountModel = require('../models/AccountsModel').default;
 
 const getAllAccounts = async (req, res) => {
     try{

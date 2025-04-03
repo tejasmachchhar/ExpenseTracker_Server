@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
+import { Schema as _Schema, model } from 'mongoose';
+const Schema = _Schema;
 
 const accountSchema = new Schema({
     userId: {
@@ -11,9 +11,19 @@ const accountSchema = new Schema({
         required: true,
     },
     accountNumber: {
-        type: Number,
+        type: String,
         required: true,
+        validate: {
+            validator: async function (value) {
+                const account = await this.constructor.findOne({ accountNumber: value });
+                if (account && account.userId.toString() == this.userId.toString()) {
+                    return false;
+                } 
+                return true;
+            },
+            message: "Account number already exists for this user",
+        },
     },
 });
 
-module.exports = mongoose.model('account',accountSchema);
+export default model('account',accountSchema);
