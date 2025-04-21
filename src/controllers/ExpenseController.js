@@ -2,6 +2,26 @@ const expenseModel = require("../models/ExpenseModel");
 const multer = require('multer');
 const path = require('path');
 const cloudinaryUtil = require('../utils/CloudinaryUtil');
+const Joi = require('joi');
+
+const expenseSchema = Joi.object({
+    userId: Joi.string().required(),
+    tranType: Joi.string().valid('income', 'expense').required(),
+    amountSpent: Joi.number().required(),
+    paidTo: Joi.string().required(),
+    dateTime: Joi.date().required(),
+    accountId: Joi.string().required(),
+    categoryId: Joi.string().required(),
+    notes: Joi.string().optional(),
+});
+
+const validateExpense = (req, res, next) => {
+    const { error } = expenseSchema.validate(req.body);
+    if (error) {
+        return res.status(400).json({ message: error.details[0].message });
+    }
+    next();
+};
 
 // Storage engine (to store attachment in server file system)
 const storage = multer.diskStorage({
@@ -38,7 +58,7 @@ const getAllExpenses = async (req, res) => {
 const addExpense = async (req, res) => {
     try {
         const addedExpense = await expenseModel.create(req.body);
-        res.status(200).jsom({
+        res.status(200).json({
             message: 'Expense added successfully',
             data: addedExpense,
         });
@@ -188,5 +208,5 @@ const deleteExpenseById = async (req, res) => {
 }
 
 module.exports = {
-    getAllExpenses, addExpense, addExpenseWithAttachment, updateExpenseById, deleteExpenseById,
+    getAllExpenses, addExpense, addExpenseWithAttachment, updateExpenseById, deleteExpenseById, validateExpense
 }

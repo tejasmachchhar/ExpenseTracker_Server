@@ -49,7 +49,7 @@ const expenseSchema = new Schema({
         type: String,
     },
 }, {
-    timespamp: true,
+    timestamp: true,
 })
 
 module.exports = mongoose.model('expense', expenseSchema)

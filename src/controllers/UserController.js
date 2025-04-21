@@ -1,6 +1,7 @@
 const userModel = require('../models/UserModels');
 const bcrypt = require("bcrypt");
 const { sendingMail } = require('../utils/MailUtil');
+const jwt = require('jsonwebtoken');
 
 const getAllUsers = async (req, res) => {
     try {
@@ -40,37 +41,36 @@ const loginUser = async (req, res) => {
     try {
         const email = req.body.email;
         const password = req.body.password;
-        if(email == null || password == null) {
+if(email == null || password == null) {
             res.status(404).json({
                 message: "Please enter email and password"
             })
             return;
         }
         const foundUserByEmail = await userModel.findOne({ email: email }).populate("roleId");
-        console.log(foundUserByEmail);
-        if (foundUserByEmail != null) {
+        if (foundUserByEmail) {
             const isMatch = bcrypt.compareSync(password, foundUserByEmail.password);
-            if (isMatch == true) {
+            if (isMatch) {
+                const token = jwt.sign(
+                    { userId: foundUserByEmail._id, role: foundUserByEmail.roleId },
+                    'your-secret-key',
+                    { expiresIn: '1h' }
+                );
                 res.status(200).json({
                     message: "Login success",
-                    data: foundUserByEmail
-                })
+                    token: token,
+                    data: foundUserByEmail,
+                });
             } else {
-                res.status(404).json({
-                    message: "Invalid password, please enter password consiously!!"
-                })
-            } 
+                res.status(401).json({ message: "Invalid password" });
+            }
         } else {
             res.status(404).json({
-                message: "User does not exist with given email: "+email
+message: "User does not exist with given email: "+email
             })
-        }  
-
+        }
     } catch (err) {
-        res.status(500).json({
-            message: "Error verifying user",
-            error: err
-        })
+        res.status(500).json({ message: "Error verifying user", error: err });
     }
 }
 

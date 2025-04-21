@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -41,6 +42,8 @@ app.use(expenseRoutes);
 const accountRoutes = require('./src/routes/AccountRoutes');
 app.use(accountRoutes);
 
+const errorHandler = require('./src/middlewares/errorHandler');
+app.use(errorHandler);
 
 // Database connection
 mongoose.connect('mongodb://localhost:27017/ExpenseTrackerDB', {
