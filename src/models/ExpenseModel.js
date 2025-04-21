@@ -7,6 +7,10 @@ const expenseSchema = new Schema({
         required: true,
         ref: 'users',
     },
+    tranType: {
+        type: String,
+        required: true
+    },
     amountSpent: {
         type: Number,
         required: true
@@ -19,14 +23,22 @@ const expenseSchema = new Schema({
         type: Number,
         required: true,
     },
+    account : {
+        type: String,
+        required: true
+    },
     accountId:{
         type: Schema.Types.ObjectId,
-        required: true,
+        // required: true,
         ref: 'account',
+    },
+    category : {
+        type: String,
+        required: true
     },
     categoryId: {
         type: Schema.Types.ObjectId,
-        required: true,
+        // required: true,
         ref: 'TransactionCategories',
     },
     notes: {

@@ -12,6 +12,7 @@ const storage = multer.diskStorage({
     },
 });
 
+
 // multer object
 const upload = multer({
     storage: storage,
@@ -66,21 +67,24 @@ const addExpenseWithAttachment = async (req, res) => {
             console.log("Request body:", req.body);
             console.log("File received:", req.file);
 
-            if (!req.file) {
-                return res.status(400).json({
-                    message: 'No file detected',
-                });
-            }
+            // if (!req.file) {
+            //     res.status(400).json({
+            //         message: 'No file detected',
+            //     });
+            // }
 
             // database data store
             try {
-                // cloudinary
-                const cloudinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(req.file);
-                console.log('cloudinaryResponse: ' + cloudinaryResponse);
+                if (req.file) {
+                    // cloudinary
+                    const cloudinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(req.file);
+                    // store url in database (MongoDB)
+                    req.body.attachmentUrl = cloudinaryResponse.secure_url;
+                    console.log('cloudinaryResponse: ' + cloudinaryResponse);
+                }
                 // console.log('req.body:' + req.body);
 
                 // store data in database (MongoDB)
-                req.body.attachmentUrl = cloudinaryResponse.secure_url;
                 req.body.dateTime = new Date(req.body.dateTime).getTime(); // Convert date to timestamp
                 // console.log('req.body after: ' + req.body);
                 const savedExpense = await expenseModel.create(req.body);
@@ -150,6 +154,8 @@ const updateExpenseById = async (req, res) => {
             }
 
             // Update the expense in the database
+            req.body.attachmentUrl = req.body.attachmentUrl || existingExpense.attachmentUrl; // Use old URL if no new file is uploaded
+            req.body.dateTime = new Date(req.body.dateTime).getTime(); // Convert date to timestamp
             const updatedExpense = await expenseModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
 
             res.status(200).json({
