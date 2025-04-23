@@ -37,7 +37,9 @@ const tranTypeRoutes = require('./src/routes/TranTypeRoutes');
 app.use(tranTypeRoutes);
 
 const expenseRoutes = require('./src/routes/ExpenseRoutes');
-app.use(expenseRoutes);
+const authenticate = require('./src/middlewares/authenticate');
+// Protect expense routes
+app.use(authenticate, expenseRoutes);
 
 const accountRoutes = require('./src/routes/AccountRoutes');
 app.use(accountRoutes);
@@ -48,7 +50,7 @@ app.use(errorHandler);
 // Database connection
 mongoose.connect('mongodb://localhost:27017/ExpenseTrackerDB', {
     // useNewUrlParser: true,
-    // useUnifiedTopology: true
+    // useUnifiedTopology: true,
 }).then(() => {
     console.log('Connected to the database');
 }).catch((err) => {

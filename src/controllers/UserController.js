@@ -41,34 +41,36 @@ const loginUser = async (req, res) => {
     try {
         const email = req.body.email;
         const password = req.body.password;
-if(email == null || password == null) {
+        if (email == null || password == null) {
             res.status(404).json({
                 message: "Please enter email and password"
             })
             return;
         }
-        const foundUserByEmail = await userModel.findOne({ email: email }).populate("roleId");
-        if (foundUserByEmail) {
-            const isMatch = bcrypt.compareSync(password, foundUserByEmail.password);
-            if (isMatch) {
-                const token = jwt.sign(
-                    { userId: foundUserByEmail._id, role: foundUserByEmail.roleId },
-                    'your-secret-key',
-                    { expiresIn: '1h' }
-                );
-                res.status(200).json({
-                    message: "Login success",
-                    token: token,
-                    data: foundUserByEmail,
-                });
-            } else {
-                res.status(401).json({ message: "Invalid password" });
-            }
-        } else {
-            res.status(404).json({
-message: "User does not exist with given email: "+email
-            })
+        const user = await userModel.findOne({ email }).populate("roleId");
+        // console.log(user);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
         }
+
+        const isMatch = bcrypt.compareSync(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Invalid password' });
+        }
+        console.log(user);
+        console.log('JWT_SECRET:', process.env.JWT_SECRET);
+        // Generate JWT token
+        const token = jwt.sign(
+            { userId: user._id, role: user.roleId.role },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' } // Token expires in 1 hour
+        );
+
+        res.status(200).json({
+            message: 'Login successful',
+            token,
+            user,
+        });
     } catch (err) {
         res.status(500).json({ message: "Error verifying user", error: err });
     }
@@ -81,7 +83,6 @@ const deleteUserById = async (req, res) => {
             message: "User deleted successfully",
             data: deletedUser
         })
-
     } catch (err) {
         res.ststus(500).json({
             message: "Error deleting user",
@@ -106,13 +107,13 @@ const findUserById = async (req, res) => {
 }
 
 const updateUserById = async (req, res) => {
-    try{
+    try {
         const updatedUser = await userModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.status(200).json({
             message: "User updated successfully",
             data: updatedUser
         })
-    }catch(err) {
+    } catch (err) {
         res.status(500).json({
             message: "Error updating user",
             error: err.message

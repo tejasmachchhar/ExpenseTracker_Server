@@ -2,26 +2,8 @@ const expenseModel = require("../models/ExpenseModel");
 const multer = require('multer');
 const path = require('path');
 const cloudinaryUtil = require('../utils/CloudinaryUtil');
-const Joi = require('joi');
+const fs = require('fs');
 
-const expenseSchema = Joi.object({
-    userId: Joi.string().required(),
-    tranType: Joi.string().valid('income', 'expense').required(),
-    amountSpent: Joi.number().required(),
-    paidTo: Joi.string().required(),
-    dateTime: Joi.date().required(),
-    accountId: Joi.string().required(),
-    categoryId: Joi.string().required(),
-    notes: Joi.string().optional(),
-});
-
-const validateExpense = (req, res, next) => {
-    const { error } = expenseSchema.validate(req.body);
-    if (error) {
-        return res.status(400).json({ message: error.details[0].message });
-    }
-    next();
-};
 
 // Storage engine (to store attachment in server file system)
 const storage = multer.diskStorage({
@@ -40,8 +22,10 @@ const upload = multer({
     // filerFilter:
 }).single('attachmentUrl');
 
+
 const getAllExpenses = async (req, res) => {
     try {
+        console.log("Request headers:", req.headers);
         const foundExpenses = await expenseModel.find();
         res.status(200).json({
             messsage: "All Expenses",
@@ -50,7 +34,24 @@ const getAllExpenses = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             message: 'Error fetching Expenses',
-            error: error.message
+            error: error.message,
+        });
+    }
+}
+
+const getExpenseByUserId = async (req, res) => {
+    try {
+        // console.log("Request headers:", req.headers);
+        const foundExpenses = await expenseModel.find({ userId: req.userId });
+        // const foundExpenses = await expenseModel.find({ userId: req.body.user._id });
+        res.status(200).json({
+            message: "All Expenses for userId: " + req.userId,
+            data: foundExpenses,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: 'Error fetching Expenses',
+            error: error.message,
         });
     }
 }
@@ -83,7 +84,7 @@ const addExpenseWithAttachment = async (req, res) => {
                 error: err.message,
             });
         } else {
-            console.log("Request headers:", req.headers);
+            // console.log("Request headers:", req.headers);
             console.log("Request body:", req.body);
             console.log("File received:", req.file);
 
@@ -107,6 +108,7 @@ const addExpenseWithAttachment = async (req, res) => {
                 // store data in database (MongoDB)
                 req.body.dateTime = new Date(req.body.dateTime).getTime(); // Convert date to timestamp
                 // console.log('req.body after: ' + req.body);
+                req.body.userId = req.userId; // Attach userId to request object
                 const savedExpense = await expenseModel.create(req.body);
                 res.status(200).json({
                     message: 'Expense added successfully',
@@ -208,5 +210,5 @@ const deleteExpenseById = async (req, res) => {
 }
 
 module.exports = {
-    getAllExpenses, addExpense, addExpenseWithAttachment, updateExpenseById, deleteExpenseById, validateExpense
+    getAllExpenses, addExpense, addExpenseWithAttachment, updateExpenseById, deleteExpenseById, getExpenseByUserId
 }
