@@ -59,8 +59,8 @@ const loginUser = async (req, res) => {
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid password' });
         }
-        console.log(user);
-        console.log('JWT_SECRET:', process.env.JWT_SECRET);
+        // console.log(user);
+        // console.log('JWT_SECRET:', process.env.JWT_SECRET);
         // Generate JWT token
         const token = jwt.sign(
             { userId: user._id, role: user.roleId.role },

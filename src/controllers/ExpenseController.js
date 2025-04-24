@@ -26,7 +26,7 @@ const upload = multer({
 
 const getAllExpenses = async (req, res) => {
     try {
-        console.log("Request headers:", req.headers);
+        // console.log("Request headers:", req.headers);
         const foundExpenses = await expenseModel.find();
         res.status(200).json({
             messsage: "All Expenses",
@@ -86,14 +86,8 @@ const addExpenseWithAttachment = async (req, res) => {
             });
         } else {
             // console.log("Request headers:", req.headers);
-            console.log("Request body:", req.body);
-            console.log("File received:", req.file);
-
-            // if (!req.file) {
-            //     res.status(400).json({
-            //         message: 'No file detected',
-            //     });
-            // }
+            // console.log("Request body:", req.body);
+            // console.log("File received:", req.file);
 
             // database data store
             try {
@@ -137,9 +131,9 @@ const updateExpenseById = async (req, res) => {
             });
         }
 
-        console.log("Request headers:", req.headers);
-        console.log("Request body:", req.body);
-        console.log("File received:", req.file);
+        // console.log("Request headers:", req.headers);
+        // console.log("Request body:", req.body);
+        // console.log("File received:", req.file);
 
         try {
             // Find the existing expense to get the old attachment URL
@@ -213,9 +207,9 @@ const deleteExpenseById = async (req, res) => {
 const dashboardData = async (req, res) => {
     try {
         const userId = req.userId;
-        console.log("Raw userId from request:", userId);
+        // console.log("Raw userId from request:", userId);
         const userObjectId = new mongoose.Types.ObjectId(userId);
-        console.log("Converted userId to ObjectId:", userObjectId);
+        // console.log("Converted userId to ObjectId:", userObjectId);
 
         // 1. Total expenses and income
         const totalsByType = await expenseModel.aggregate([
@@ -366,12 +360,12 @@ const getDailyTrends = async (req, res) => {
                 ? parseDate(req.query.startDate)
                 : new Date(endDate.getTime() - (30 * 24 * 60 * 60 * 1000));
 
-            console.log('Parsed dates:', {
-                startDate: startDate.toISOString(),
-                endDate: endDate.toISOString(),
-                startTimestamp: startDate.getTime(),
-                endTimestamp: endDate.getTime()
-            });
+            // console.log('Parsed dates:', {
+            //     startDate: startDate.toISOString(),
+            //     endDate: endDate.toISOString(),
+            //     startTimestamp: startDate.getTime(),
+            //     endTimestamp: endDate.getTime()
+            // });
 
             // Set time to start and end of day
             startDate.setHours(0, 0, 0, 0);
@@ -438,12 +432,12 @@ const getDailyTrends = async (req, res) => {
                 currentDate.setDate(currentDate.getDate() + 1);
             }
 
-            console.log("Daily trends result:", {
-                resultLength: result.length,
-                firstDate: result[0]?.date,
-                lastDate: result[result.length - 1]?.date,
-                sampleData: result.slice(0, 2)
-            });
+            // console.log("Daily trends result:", {
+            //     resultLength: result.length,
+            //     firstDate: result[0]?.date,
+            //     lastDate: result[result.length - 1]?.date,
+            //     sampleData: result.slice(0, 2)
+            // });
 
             res.status(200).json({
                 message: "Daily trends data fetched successfully",

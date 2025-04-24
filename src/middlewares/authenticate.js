@@ -3,7 +3,7 @@ const UserModels = require('../models/UserModels');
 
 const authenticate = async (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];
-    console.log('Token from frontend: '+token);
+    // console.log('Token from frontend: '+token);
     
     if (!token) {
         return res.status(401).json({ message: 'Access denied. No token provided.' });
@@ -21,7 +21,7 @@ const authenticate = async (req, res, next) => {
         }); // Use the secret key from .env
         // console.log('Decoded:', decoded);
         const user = await UserModels.findById(decoded.userId);
-        console.log('User from token:', req.userId);
+        // console.log('User from token:', req.userId);
     } catch (err) {
         console.error('Token verification error:', err);
         res.status(400).json({ message: 'Invalid token' });
