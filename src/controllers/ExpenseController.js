@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const expenseModel = require("../models/ExpenseModel");
 const multer = require('multer');
 const path = require('path');
@@ -209,6 +210,272 @@ const deleteExpenseById = async (req, res) => {
     }
 }
 
+const dashboardData = async (req, res) => {
+    try {
+        const userId = req.userId;
+        console.log("Raw userId from request:", userId);
+        const userObjectId = new mongoose.Types.ObjectId(userId);
+        console.log("Converted userId to ObjectId:", userObjectId);
+
+        // 1. Total expenses and income
+        const totalsByType = await expenseModel.aggregate([
+            { $match: { userId: userObjectId } },
+            {
+                $group: {
+                    _id: "$tranType",
+                    total: { $sum: "$amountSpent" }
+                }
+            }
+        ]);
+
+        // 2. This month's totals by type
+        const currentDate = new Date();
+        const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getTime();
+        const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getTime();
+
+        const thisMonthTotalsByType = await expenseModel.aggregate([
+            {
+                $match: {
+                    userId: userObjectId,
+                    dateTime: { $gte: startOfMonth, $lte: endOfMonth }
+                }
+            },
+            {
+                $group: {
+                    _id: "$tranType",
+                    total: { $sum: "$amountSpent" }
+                }
+            }
+        ]);
+
+        // 3. Monthly average by type
+        const allMonthsExpensesByType = await expenseModel.aggregate([
+            { $match: { userId: userObjectId } },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: { $toDate: "$dateTime" } },
+                        month: { $month: { $toDate: "$dateTime" } },
+                        tranType: "$tranType"
+                    },
+                    monthlyTotal: { $sum: "$amountSpent" }
+                }
+            }
+        ]);
+
+        // Calculate averages by type
+        const expenseMonths = allMonthsExpensesByType.filter(m => m._id.tranType === 'expense');
+        const incomeMonths = allMonthsExpensesByType.filter(m => m._id.tranType === 'income');
+
+        const monthlyAverageExpense = expenseMonths.length > 0 
+            ? expenseMonths.reduce((acc, curr) => acc + curr.monthlyTotal, 0) / expenseMonths.length
+            : 0;
+        
+        const monthlyAverageIncome = incomeMonths.length > 0
+            ? incomeMonths.reduce((acc, curr) => acc + curr.monthlyTotal, 0) / incomeMonths.length
+            : 0;
+
+        // 4. Category wise totals by transaction type
+        const categoryWiseTotal = await expenseModel.aggregate([
+            { $match: { userId: userObjectId } },
+            {
+                $group: {
+                    _id: {
+                        category: "$category",
+                        tranType: "$tranType"
+                    },
+                    total: { $sum: "$amountSpent" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "transactioncategories",
+                    localField: "_id.category",
+                    foreignField: "category",
+                    as: "categoryInfo"
+                }
+            },
+            {
+                $project: {
+                    categoryName: { $arrayElemAt: ["$categoryInfo.category", 0] },
+                    tranType: "$_id.tranType",
+                    total: 1
+                }
+            }
+        ]);
+
+        // Separate categories by transaction type
+        const expenseCategories = categoryWiseTotal
+            .filter(cat => cat.tranType === 'expense')
+            .map(({ categoryName, total }) => ({ categoryName, total }));
+
+        const incomeCategories = categoryWiseTotal
+            .filter(cat => cat.tranType === 'income')
+            .map(({ categoryName, total }) => ({ categoryName, total }));
+
+        const findTotal = (array, type) => array.find(item => item._id === type)?.total || 0;
+        const findMonthTotal = (array, type) => array.find(item => item._id === type)?.total || 0;
+
+        res.status(200).json({
+            message: "Dashboard data fetched successfully",
+            data: {
+                income: {
+                    total: findTotal(totalsByType, 'income'),
+                    thisMonth: findMonthTotal(thisMonthTotalsByType, 'income'),
+                    monthlyAverage: monthlyAverageIncome,
+                    categories: incomeCategories
+                },
+                expense: {
+                    total: findTotal(totalsByType, 'expense'),
+                    thisMonth: findMonthTotal(thisMonthTotalsByType, 'expense'),
+                    monthlyAverage: monthlyAverageExpense,
+                    categories: expenseCategories
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        res.status(500).json({
+            message: 'Error fetching dashboard data',
+            error: error.message
+        });
+    }
+}
+
+const getDailyTrends = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const userObjectId = new mongoose.Types.ObjectId(userId);
+
+        // Parse dates handling both timestamp and date string formats
+        const parseDate = (dateValue) => {
+            if (!dateValue) return new Date();
+            // Try parsing as timestamp first
+            const timestampDate = new Date(Number(dateValue));
+            if (!isNaN(timestampDate.getTime())) return timestampDate;
+            // If not a valid timestamp, try parsing as date string
+            const stringDate = new Date(dateValue);
+            if (!isNaN(stringDate.getTime())) return stringDate;
+            throw new Error('Invalid date format');
+        };
+
+        try {
+            const endDate = parseDate(req.query.endDate);
+            const startDate = req.query.startDate 
+                ? parseDate(req.query.startDate)
+                : new Date(endDate.getTime() - (30 * 24 * 60 * 60 * 1000));
+
+            console.log('Parsed dates:', {
+                startDate: startDate.toISOString(),
+                endDate: endDate.toISOString(),
+                startTimestamp: startDate.getTime(),
+                endTimestamp: endDate.getTime()
+            });
+
+            // Set time to start and end of day
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(23, 59, 59, 999);
+
+            const dailyTrends = await expenseModel.aggregate([
+                {
+                    $match: {
+                        userId: userObjectId,
+                        dateTime: {
+                            $gte: startDate.getTime(),
+                            $lte: endDate.getTime()
+                        }
+                    }
+                },
+                {
+                    $group: {
+                        _id: {
+                            date: {
+                                $dateToString: {
+                                    format: "%Y-%m-%d",
+                                    date: { $toDate: "$dateTime" }
+                                }
+                            },
+                            tranType: "$tranType"
+                        },
+                        total: { $sum: "$amountSpent" }
+                    }
+                },
+                {
+                    $sort: { "_id.date": 1 }
+                }
+            ]);
+
+            // Transform the data into a more frontend-friendly format
+            const transformedData = dailyTrends.reduce((acc, curr) => {
+                const date = curr._id.date;
+                const type = curr._id.tranType;
+                const amount = curr.total;
+
+                if (!acc[date]) {
+                    acc[date] = {
+                        date,
+                        expense: 0,
+                        income: 0
+                    };
+                }
+
+                acc[date][type] = amount;
+                return acc;
+            }, {});
+
+            // Convert to array and fill in missing dates
+            const result = [];
+            const currentDate = new Date(startDate);
+            
+            while (currentDate <= endDate) {
+                const dateStr = currentDate.toISOString().split('T')[0];
+                result.push({
+                    date: dateStr,
+                    expense: transformedData[dateStr]?.expense || 0,
+                    income: transformedData[dateStr]?.income || 0
+                });
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            console.log("Daily trends result:", {
+                resultLength: result.length,
+                firstDate: result[0]?.date,
+                lastDate: result[result.length - 1]?.date,
+                sampleData: result.slice(0, 2)
+            });
+
+            res.status(200).json({
+                message: "Daily trends data fetched successfully",
+                data: result
+            });
+
+        } catch (parseError) {
+            return res.status(400).json({
+                message: 'Invalid date parameters',
+                startDate: req.query.startDate,
+                endDate: req.query.endDate,
+                error: parseError.message
+            });
+        }
+
+    } catch (error) {
+        console.error('Error fetching daily trends:', error);
+        res.status(500).json({
+            message: 'Error fetching daily trends data',
+            error: error.message
+        });
+    }
+};
+
+
 module.exports = {
-    getAllExpenses, addExpense, addExpenseWithAttachment, updateExpenseById, deleteExpenseById, getExpenseByUserId
+    getAllExpenses, 
+    addExpense, 
+    addExpenseWithAttachment, 
+    updateExpenseById, 
+    deleteExpenseById, 
+    getExpenseByUserId,
+    dashboardData,
+    getDailyTrends
 }

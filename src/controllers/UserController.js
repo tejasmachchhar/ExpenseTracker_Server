@@ -24,12 +24,14 @@ const createUser = async (req, res) => {
         const hashedPassword = bcrypt.hashSync(req.body.password, salt);
         req.body.password = hashedPassword;
         const createdUser = await userModel.create(req.body);
+        // console.log(createdUser);
         res.status(201).json({
             message: 'User created successfully',
             data: createdUser
         });
         sendingMail(req.body.email, "Welcome to Expense Tracker", "You have successfully registered to Expense Tracker");
     } catch (err) {
+        // console.error(err);
         res.status(500).json({
             message: "Error creating user",
             error: err.message
